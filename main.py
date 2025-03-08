@@ -65,5 +65,11 @@ class HieringAI:
 
         if ans_eval.technical_accuracy < 5:
             ans_eval = followUp_improve("technical accuracy")
+        
+        def followUp_inDepth(question,answer):
 
+            followUp_question = self.llm.followup(question,answer)
+            self.mouth.speak(followUp_question)
+            followUP_ans = self.ear.hear()
+            self.llm.evaluate_answer(followUp_question,followUP_ans)
 

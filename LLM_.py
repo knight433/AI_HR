@@ -1,13 +1,16 @@
 from langchain_huggingface import HuggingFaceEndpoint
+from huggingface_hub import InferenceClient
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain_core.output_parsers import PydanticOutputParser
 import os
 import json
 from pydantic import BaseModel, Field
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 API_KEY = os.getenv("HUGGINGFACEHUB_API_KEY")
 
-# Define structured response models using Pydantic
 class EvaluationResponse(BaseModel):
     relevance: int = Field(ge=0, le=10, description="Relevance score from 1 to 10")
     depth: int = Field(ge=0, le=10, description="Depth score from 1 to 10")
@@ -30,92 +33,72 @@ class SkillResponse(BaseModel):
 class HumanizeResponse(BaseModel):
     text : str = Field(description="the new text with same meaning")
 
+class FollowUpResponse(BaseModel):
+    follow_up_question: str = Field(description="A relevant follow-up question based on the candidate's answer.")
+
 
 class LLM_hr:
     def __init__(self):
         self.respond_llm = HuggingFaceEndpoint(
             repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-            huggingfacehub_api_token=API_KEY
+            huggingfacehub_api_token=API_KEY,
+            task="text-generation"
         )
-
-    def parse_json_response(self, response_text: str):
-        try:
-            return json.loads(response_text)
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON response from model", "raw_text": response_text}
-
-    def evaluate_answer(self, question: str, candidate_answer: str):
+    
+    
+    
+    #**Tested
+    #TODO: completed
+    def evaluate_answer(self, question: str, candidate_answer: str): 
+        
+        prase = PydanticOutputParser(pydantic_object=EvaluationResponse)
         evaluation_prompt = PromptTemplate(
             template="""
             You are an AI hiring agent responsible for evaluating candidates' answers.
             
             **Question:** {question}  
             **Candidate's Answer:** {candidate_answer}  
-            
-            Evaluate the response based on the following criteria:  
-            - **Relevance** (1-10)  
-            - **Depth** (1-10)  
-            - **Technical Accuracy** (1-10)  
-            - **Communication** (1-10)  
-            - **Confidence** (1-10)  
-            - **Summary** (Brief explanation)  
-
-            Return ONLY valid JSON output with keys: relevance, depth, technical_accuracy, 
-            communication, confidence, and summary.
+            {format_instruction}
             """,
-            input_variables=["question", "candidate_answer"]
+            input_variables=["question", "candidate_answer"],
+            partial_variables={'format_instruction':prase.get_format_instructions()}
         )
 
-        chain = LLMChain(llm=self.respond_llm, prompt=evaluation_prompt)
+        chain = evaluation_prompt | self.respond_llm | prase
         result = chain.invoke({"question": question, "candidate_answer": candidate_answer})
 
-        response_text = result.get("text", "").strip()
-        response_data = self.parse_json_response(response_text)
+        return result
 
-        if "error" in response_data:
-            print("Error: Model did not return valid JSON.")
-            print("Raw output:", response_text)
-            return response_data
-
-        return EvaluationResponse(**response_data)
-
-    def resumeFit(self, resume_text: str):
+    #! Not Tested
+    #TODO: completed base
+    def resumeFit(self, resume_text: str): 
         if not resume_text:
             raise ValueError("Resume text cannot be empty.")
 
+        parser = PydanticOutputParser(pydantic_object=ResumeFitResponse)
         fit_prompt = PromptTemplate(
             template="""
             You are an AI hiring agent reviewing resumes.
             Given the following resume text, analyze its suitability for a job.
-
             **Resume Text:**  
             {resume_text}  
-
-            Evaluate the resume based on:  
-            - **Skill Match %** (0-10)  
-            - **Experience Fit %** (0-10)  
-            - **Overall Fit Score** (0-10)   
-            - **Potential Concerns**  
-
-            Return ONLY valid JSON output with keys: skill_match, experience_fit, overall_fit_score, potential_concerns.
+            
+            {format_instruction}
             """,
-            input_variables=["resume_text"]
+            input_variables=["resume_text"],
+            partial_variables={'format_instruction':parser.get_format_instructions()}
         )
 
-        chain = LLMChain(llm=self.respond_llm, prompt=fit_prompt)
+        chain = fit_prompt | self.respond_llm | parser
         result = chain.invoke({"resume_text": resume_text})
 
-        response_text = result.get("text", "").strip()
-        response_data = self.parse_json_response(response_text)
+        return result
 
-        if "error" in response_data:
-            print("Error: Model did not return valid JSON.")
-            print("Raw output:", response_text)
-            return response_data
-
-        return ResumeFitResponse(**response_data)
-
-    def getSkill(self,job,level):
+    #**Tested
+    #TODO: completed 
+    def getSkill(self, job:str, level:int):
+        
+        parser = PydanticOutputParser(pydantic_object=SkillResponse)
 
         get_skill_prompt = PromptTemplate(
             template="""
@@ -125,51 +108,58 @@ class LLM_hr:
             Experience Level: {level} (0 = Fresher, 10 = Senior)
 
             Based on the job title and experience level, list the most relevant technical and soft skills a candidate should have.  
-
-            Provide a structured response in the following format:
-
-            - **Technical Skills:** (List key technical skills)  
-            - **Soft Skills:** (List key soft skills)  
-            - **Additional Requirements (if any):** (Certifications, tools, domain expertise, etc.)
-
-            Ensure the response is detailed and tailored to the given job role and experience level.
+            {format_instruction}.
             """,
-            input_variables=["job_title", "level"]
+            input_variables=["job_title", "level"],
+            partial_variables={'format_instruction':parser.get_format_instructions()}
         )
 
 
-        chain = LLMChain(llm=self.respond_llm, prompt=get_skill_prompt)
-        result = chain.invoke({"job title": job,"level" : level})
+        chain = get_skill_prompt | self.respond_llm | parser
+        result = chain.invoke({"job_title": job,"level" : level})
+        return result
 
-        response_text = result.get("text", "").strip()
-        response_data = self.parse_json_response(response_text)
-
-        if "error" in response_data:
-            print("Error: Model did not return valid JSON.")
-            print("Raw output:", response_text)
-            return response_data
-
-        return SkillResponse(**response_data)
-
-    def makeHumanLike(self,in_string,tone="soft"):
-
+    #!Not Tested
+    #TODO: completed 
+    def makeHumanLike(self,in_string:str ,tone="soft"): 
+        
+        parser = PydanticOutputParser(pydantic_object=HumanizeResponse)
         prompt = PromptTemplate(
                 template='''Rewrite the following sentence while keeping the same meaning but using different words and structure with {tone} tone.
                         Ensure the paraphrased text remains natural, fluent, and grammatically correct.
-                        Provide a structured response in the following format:
-                        **New Text**: (the new text genatrated)
-                        Original sentence: "{input_text}"'''
+                        Original sentence: "{input_text}"
+                        {format_instructions}.
+                        ''',
+                        input_variables=['input_text','tone'],
+                        partial_variables={"format_instructions":parser.get_format_instructions()}
                 )
         
-        chain = LLMChain(llm=self.respond_llm, prompt=prompt)
-        result = chain.invoke({"input_text" : in_string,"tone":tone})
+        chain = prompt | self.respond_llm | parser
+        result = chain.invoke({"input_text" : in_string,"tone":tone},config={"temperature": 0.2})
 
-        response_text = result.get("text", "").strip()
-        response_data = self.parse_json_response(response_text)
+        return result
+    
+    #**tested
+    #TODO: completed
+    def followUp(self, question: str, answer: str):
+        parser = PydanticOutputParser(pydantic_object=FollowUpResponse)
 
-        if "error" in response_data:
-            print("Error: Model did not return valid JSON.")
-            print("Raw output:", response_text)
-            return response_data
+        followup_prompt = PromptTemplate(
+            template="""
+            You are an AI interviewer analyzing a candidate's response.
+            
+            **Question:** {question}  
+            **Candidate's Answer:** {answer}  
 
-        return HumanizeResponse(**response_data)
+            Your task is to generate a follow-up question in **valid JSON format only**.
+            Do not include extra text or explanations.
+            
+            {format_instructions}
+            """,
+            input_variables=["question", "answer"],
+            partial_variables={'format_instructions': parser.get_format_instructions()}
+        )
+
+        chain = followup_prompt | self.respond_llm | parser
+        result = chain.invoke({"question": question, "answer": answer})
+        return result
