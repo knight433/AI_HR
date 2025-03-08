@@ -1,11 +1,35 @@
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 import os
-from PyPDF2 import PdfReader
+import json
+from pydantic import BaseModel, Field
 
 API_KEY = os.getenv("HUGGINGFACEHUB_API_KEY")
+
+# Define structured response models using Pydantic
+class EvaluationResponse(BaseModel):
+    relevance: int = Field(ge=0, le=10, description="Relevance score from 1 to 10")
+    depth: int = Field(ge=0, le=10, description="Depth score from 1 to 10")
+    technical_accuracy: int = Field(ge=0, le=10, description="Technical accuracy score from 1 to 10")
+    communication: int = Field(ge=0, le=10, description="Communication score from 1 to 10")
+    confidence: int = Field(ge=0, le=10, description="Confidence score from 1 to 10")
+    summary: str = Field(description="Brief summary of the evaluation")
+
+class ResumeFitResponse(BaseModel):
+    skill_match: int = Field(ge=0, le=10, description="Skill match percentage (0-10)")
+    experience_fit: int = Field(ge=0, le=10, description="Experience fit percentage (0-10)")
+    overall_fit_score: int = Field(ge=0, le=10, description="Overall fit score (0-10)")
+    potential_concerns: str = Field(description="Potential concerns about the candidate")
+
+class SkillResponse(BaseModel):
+    tech_skills: list[str] = Field(description="Technical skills expected from the candidate")
+    soft_skills: list[str] = Field(description="Soft skills required for the role")
+    additional_requirements: list[str] = Field(default=[], description="Any additional requirements like certifications or tools")
+
+class HumanizeResponse(BaseModel):
+    text : str = Field(description="the new text with same meaning")
+
 
 class LLM_hr:
     def __init__(self):
@@ -14,53 +38,13 @@ class LLM_hr:
             huggingfacehub_api_token=API_KEY
         )
 
-    def get_job_requirements(self, title: str, skills: list, level: int):
-        skills_str = ", ".join(skills)
-
-        # Define output schema
-        response_schemas = [
-            ResponseSchema(name="questions", description="List of generated interview questions")
-        ]
-
-        # Create output parser
-        output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
-        format_instructions = output_parser.get_format_instructions()
-
-        # Define prompt
-        require_prompt = PromptTemplate(
-            template="""You are an AI hiring agent. 
-            The job position is {title}, requiring skills: {skills} with a proficiency level of {level}/10.
-            Generate a set of interview questions suitable for evaluating the candidate's competency.
-            
-            {format_instructions}
-            """,
-            input_variables=["title", "skills", "level"],
-            partial_variables={"format_instructions": format_instructions}
-        )
-
-        # Create chain
-        chain = LLMChain(llm=self.respond_llm, prompt=require_prompt)
-        result = chain.invoke({"title": title, "skills": skills_str, "level": level})
-
-        # Directly return the result (already a dictionary)
-        return result  # No need for output_parser.parse(result)
+    def parse_json_response(self, response_text: str):
+        try:
+            return json.loads(response_text)
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON response from model", "raw_text": response_text}
 
     def evaluate_answer(self, question: str, candidate_answer: str):
-        # Define output schema
-        response_schemas = [
-            ResponseSchema(name="relevance", description="Relevance score from 1 to 10"),
-            ResponseSchema(name="depth", description="Depth score from 1 to 10"),
-            ResponseSchema(name="technical_accuracy", description="Technical accuracy score from 1 to 10"),
-            ResponseSchema(name="communication", description="Communication score from 1 to 10"),
-            ResponseSchema(name="confidence", description="Confidence score from 1 to 10"),
-            ResponseSchema(name="summary", description="Brief summary of the evaluation")
-        ]
-
-        # Create output parser
-        output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
-        format_instructions = output_parser.get_format_instructions()
-
-        # Define prompt
         evaluation_prompt = PromptTemplate(
             template="""
             You are an AI hiring agent responsible for evaluating candidates' answers.
@@ -75,46 +59,30 @@ class LLM_hr:
             - **Communication** (1-10)  
             - **Confidence** (1-10)  
             - **Summary** (Brief explanation)  
-            
-            {format_instructions}
+
+            Return ONLY valid JSON output with keys: relevance, depth, technical_accuracy, 
+            communication, confidence, and summary.
             """,
-            input_variables=["question", "candidate_answer"],
-            partial_variables={"format_instructions": format_instructions}
+            input_variables=["question", "candidate_answer"]
         )
 
-        # Create chain
         chain = LLMChain(llm=self.respond_llm, prompt=evaluation_prompt)
         result = chain.invoke({"question": question, "candidate_answer": candidate_answer})
-        return result
-    
-    def extract_text_from_pdf(self, resume):
-        """Extracts text from a PDF file."""
-        reader = PdfReader(resume)
-        text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
-        return text.strip() if text else None
 
-    def resumeFit(self, resume):
-        """Analyzes a resume and evaluates how well it fits a job description."""
-        resume_text = self.extract_text_from_pdf(resume)
+        response_text = result.get("text", "").strip()
+        response_data = self.parse_json_response(response_text)
 
+        if "error" in response_data:
+            print("Error: Model did not return valid JSON.")
+            print("Raw output:", response_text)
+            return response_data
+
+        return EvaluationResponse(**response_data)
+
+    def resumeFit(self, resume_text: str):
         if not resume_text:
-            return {"error": "Could not extract text from the resume PDF."}
+            raise ValueError("Resume text cannot be empty.")
 
-        # Define structured output schema
-        response_schemas = [
-            ResponseSchema(name="skill_match", description="Skill match percentage (0-100)"),
-            ResponseSchema(name="experience_fit", description="Experience fit percentage (0-100)"),
-            ResponseSchema(name="overall_fit_score", description="Overall fit score (0-100)"),
-            ResponseSchema(name="key_strengths", description="List of key strengths"),
-            ResponseSchema(name="potential_concerns", description="List of potential concerns"),
-            ResponseSchema(name="suggested_improvements", description="List of suggested improvements")
-        ]
-
-        # Create structured output parser
-        output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
-        format_instructions = output_parser.get_format_instructions()
-
-        # Define prompt with structured output format
         fit_prompt = PromptTemplate(
             template="""
             You are an AI hiring agent reviewing resumes.
@@ -126,20 +94,82 @@ class LLM_hr:
             Evaluate the resume based on:  
             - **Skill Match %** (0-10)  
             - **Experience Fit %** (0-10)  
-            - **Overall Fit Score** (0-10)  
-            - **Key Strengths**  
+            - **Overall Fit Score** (0-10)   
             - **Potential Concerns**  
 
-            {format_instructions}
+            Return ONLY valid JSON output with keys: skill_match, experience_fit, overall_fit_score, potential_concerns.
             """,
-            input_variables=["resume_text"],
-            partial_variables={"format_instructions": format_instructions}
+            input_variables=["resume_text"]
         )
 
-        # Create chain
         chain = LLMChain(llm=self.respond_llm, prompt=fit_prompt)
         result = chain.invoke({"resume_text": resume_text})
 
-        return result
+        response_text = result.get("text", "").strip()
+        response_data = self.parse_json_response(response_text)
+
+        if "error" in response_data:
+            print("Error: Model did not return valid JSON.")
+            print("Raw output:", response_text)
+            return response_data
+
+        return ResumeFitResponse(**response_data)
+
+    def getSkill(self,job,level):
+
+        get_skill_prompt = PromptTemplate(
+            template="""
+            You are an expert career advisor. Your task is to determine the essential skills required for a candidate applying for a job.
+
+            Job Title: {job_title}  
+            Experience Level: {level} (0 = Fresher, 10 = Senior)
+
+            Based on the job title and experience level, list the most relevant technical and soft skills a candidate should have.  
+
+            Provide a structured response in the following format:
+
+            - **Technical Skills:** (List key technical skills)  
+            - **Soft Skills:** (List key soft skills)  
+            - **Additional Requirements (if any):** (Certifications, tools, domain expertise, etc.)
+
+            Ensure the response is detailed and tailored to the given job role and experience level.
+            """,
+            input_variables=["job_title", "level"]
+        )
 
 
+        chain = LLMChain(llm=self.respond_llm, prompt=get_skill_prompt)
+        result = chain.invoke({"job title": job,"level" : level})
+
+        response_text = result.get("text", "").strip()
+        response_data = self.parse_json_response(response_text)
+
+        if "error" in response_data:
+            print("Error: Model did not return valid JSON.")
+            print("Raw output:", response_text)
+            return response_data
+
+        return SkillResponse(**response_data)
+
+    def makeHumanLike(self,in_string,tone="soft"):
+
+        prompt = PromptTemplate(
+                template='''Rewrite the following sentence while keeping the same meaning but using different words and structure with {tone} tone.
+                        Ensure the paraphrased text remains natural, fluent, and grammatically correct.
+                        Provide a structured response in the following format:
+                        **New Text**: (the new text genatrated)
+                        Original sentence: "{input_text}"'''
+                )
+        
+        chain = LLMChain(llm=self.respond_llm, prompt=prompt)
+        result = chain.invoke({"input_text" : in_string,"tone":tone})
+
+        response_text = result.get("text", "").strip()
+        response_data = self.parse_json_response(response_text)
+
+        if "error" in response_data:
+            print("Error: Model did not return valid JSON.")
+            print("Raw output:", response_text)
+            return response_data
+
+        return HumanizeResponse(**response_data)
