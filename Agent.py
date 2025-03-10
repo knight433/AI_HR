@@ -6,24 +6,30 @@ from datetime import datetime
 class HieringAI:
 
     def __init__(self):
-        
+        pass
         self.mouth = Voice()
         self.ear = Hear()
         self.llm = LLM_.LLM_hr()
     
+    #! Not tested
+    #TODO: completed
     def extract_text_from_pdf(self, resume):
 
         reader = PdfReader(resume)
         text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
         self.resume_text = text.strip() if text else None
-
+    
+    #!** tested
+    #TODO: completed
     def setup(self,**kwargs):
 
         self.job = kwargs.get("job","Software Engineer")
         self.level = kwargs.get("level",5)
-        self.skills = kwargs.get("skill", self.llm.getSkill(self.job, self.level))
+        self.skills = kwargs.get("skills", self.llm.getSkill(self.job, self.level))
         self.name = kwargs.get("name","NO NAME")
 
+    #! Not tested
+    #TODO: completed
     def greet(self):
         cur_time = datetime.now().hour  # Get current hour
 
@@ -41,6 +47,8 @@ class HieringAI:
         else:
             self.mouth.speak(f"Hello {self.name}, {greet_str}")
 
+    #! Not tested
+    #TODO: completed
     def ask_question(self,question):
 
         self.mouth.speak(question)
@@ -48,7 +56,9 @@ class HieringAI:
 
         ans_eval = self.llm.evaluate_answer(question,answer)
 
-        def followUp_improve(area):
+        #! Not tested
+        #TODO: completed
+        def followUp_improve(area): #?Helper
             to_speak = self.llm.makeHumanLike(
                 f"It seems like your answer is missing {area}, could you please explain it again?", tone="soft"
             )
@@ -66,10 +76,21 @@ class HieringAI:
         if ans_eval.technical_accuracy < 5:
             ans_eval = followUp_improve("technical accuracy")
         
-        def followUp_inDepth(question,answer):
+        #! Not tested
+        #TODO: completed
+        def technical_accuracy(c_answer):#?Helper
 
-            followUp_question = self.llm.followup(question,answer)
+            followUp_question = self.llm.followup(question,c_answer)
             self.mouth.speak(followUp_question)
             followUP_ans = self.ear.hear()
-            self.llm.evaluate_answer(followUp_question,followUP_ans)
+            eval = self.llm.evaluate_answer(followUp_question,followUP_ans)
+
+            if eval.technical_accuracy > 6:
+                return  eval.technical_accuracy
+
+        depth_tech = technical_accuracy(question,answer)
+
+        return ans_eval,depth_tech
+    
+        
 

@@ -1,9 +1,7 @@
 from langchain_huggingface import HuggingFaceEndpoint
-from huggingface_hub import InferenceClient
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 import os
-import json
 from pydantic import BaseModel, Field
 
 import warnings
@@ -35,6 +33,12 @@ class HumanizeResponse(BaseModel):
 
 class FollowUpResponse(BaseModel):
     follow_up_question: str = Field(description="A relevant follow-up question based on the candidate's answer.")
+
+class ResumeInfoExtract(BaseModel):
+    name : str = Field(description="the candidate name")
+    skills : list[str] = Field(description="Skill possed by the candidate")
+    projects : dict[str,str] = Field(description='All the projects candidate has done and there discription')
+    experence : float = Field(description="The exprence the candidate have")
 
 
 class LLM_hr:
@@ -119,14 +123,13 @@ class LLM_hr:
         result = chain.invoke({"job_title": job,"level" : level})
         return result
 
-    #!Not Tested
+    #**Tested
     #TODO: completed 
     def makeHumanLike(self,in_string:str ,tone="soft"): 
         
         parser = PydanticOutputParser(pydantic_object=HumanizeResponse)
         prompt = PromptTemplate(
                 template='''Rewrite the following sentence while keeping the same meaning but using different words and structure with {tone} tone.
-                        Ensure the paraphrased text remains natural, fluent, and grammatically correct.
                         Original sentence: "{input_text}"
                         {format_instructions}.
                         ''',
@@ -163,3 +166,12 @@ class LLM_hr:
         chain = followup_prompt | self.respond_llm | parser
         result = chain.invoke({"question": question, "answer": answer})
         return result
+
+    #!not tested
+    #TODO: in development
+    def resmue_profile(self,resume_text):
+        
+        resume_parser = PydanticOutputParser(pydantic_object=ResumeInfoExtract)
+    
+    
+
