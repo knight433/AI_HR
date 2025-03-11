@@ -24,8 +24,8 @@ class ResumeFitResponse(BaseModel):
     potential_concerns: str = Field(description="Potential concerns about the candidate")
 
 class SkillResponse(BaseModel):
-    tech_skills: list[str] = Field(description="Technical skills expected from the candidate")
-    soft_skills: list[str] = Field(description="Soft skills required for the role")
+    tech_skills: dict[str,int] = Field(description="Technical skills expected from the candidate and its level from 1 to 10")
+    soft_skills: dict[str,int] = Field(description="Soft skills required for the role and its level from 1 to 10")
     additional_requirements: list[str] = Field(default=[], description="Any additional requirements like certifications or tools")
 
 class HumanizeResponse(BaseModel):
@@ -39,6 +39,9 @@ class ResumeInfoExtract(BaseModel):
     skills : list[str] = Field(description="Skill possed by the candidate")
     projects : dict[str,str] = Field(description='All the projects candidate has done and there discription')
     experence : float = Field(description="The exprence the candidate have")
+
+class QuestionRespose(BaseModel):
+    questions : dict[str,int] = Field(description='the question and its imporatance (1-10), 10 being very important')
 
 
 class LLM_hr:
@@ -111,7 +114,7 @@ class LLM_hr:
             Job Title: {job_title}  
             Experience Level: {level} (0 = Fresher, 10 = Senior)
 
-            Based on the job title and experience level, list the most relevant technical and soft skills a candidate should have.  
+            Based on the job title and experience level, list the most relevant technical and soft skills a candidate should have with the level of experties they must have on that skill.  
             {format_instruction}.
             """,
             input_variables=["job_title", "level"],
@@ -121,6 +124,26 @@ class LLM_hr:
 
         chain = get_skill_prompt | self.respond_llm | parser
         result = chain.invoke({"job_title": job,"level" : level})
+        return result
+    
+    #!Not Tested
+    #TODO: completed
+    def genrateQuestions(self,topic:str,level:int) -> dict[str,int]:
+
+        question_parse = PydanticOutputParser(pydantic_object=QuestionRespose)
+        question_prompt = PromptTemplate(
+                    template="""
+                    You are an AI hiring agent. 
+                    Generate a 3 interview questions for the topic "{topic}" suitable for a candidate with skill level {level}/10.
+
+                    Each question should have an importance rating (1-10), where 10 is most important.
+                    {format_instruction}
+                    """,
+                    input_variables=["topic", "level"],
+                    partial_variables={'format_instruction':question_parse.get_format_instructions()}
+                )
+        chain = question_prompt | self.respond_llm | question_parse
+        result = chain.invoke({"job_title": topic,"level" : level})
         return result
 
     #**Tested
@@ -173,5 +196,5 @@ class LLM_hr:
         
         resume_parser = PydanticOutputParser(pydantic_object=ResumeInfoExtract)
     
-    
+
 

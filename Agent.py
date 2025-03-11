@@ -19,8 +19,8 @@ class HieringAI:
         text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
         self.resume_text = text.strip() if text else None
     
-    #!** tested
-    #TODO: completed
+    #** tested
+    #TODO: in development, changes in skill may be requried in the future
     def setup(self,**kwargs):
 
         self.job = kwargs.get("job","Software Engineer")
@@ -28,7 +28,7 @@ class HieringAI:
         self.skills = kwargs.get("skills", self.llm.getSkill(self.job, self.level))
         self.name = kwargs.get("name","NO NAME")
 
-    #! Not tested
+    #** tested
     #TODO: completed
     def greet(self):
         cur_time = datetime.now().hour  # Get current hour
@@ -92,5 +92,14 @@ class HieringAI:
 
         return ans_eval,depth_tech
     
+    #!Not Tested
+    #TODO: in development
+    def genrate_question(self,skills : dict[str,int]) -> None: 
+        
+        self.questions = {}
+        for skill,level in skills:
+            self.questions[skill] = self.llm.genrateQuestions(skill,level)
+        
+
         
 
