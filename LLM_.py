@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-API_KEY = os.getenv("HUGGINGFACEHUB_API_KEY")
+API_KEY = os.getenv("HUGGINGFACE_API_KEY_2")
 
 class EvaluationResponse(BaseModel):
     relevance: int = Field(ge=0, le=10, description="Relevance score from 1 to 10")
@@ -24,9 +24,7 @@ class ResumeFitResponse(BaseModel):
     potential_concerns: str = Field(description="Potential concerns about the candidate")
 
 class SkillResponse(BaseModel):
-    tech_skills: dict[str,int] = Field(description="Technical skills expected from the candidate and its level from 1 to 10")
-    soft_skills: dict[str,int] = Field(description="Soft skills required for the role and its level from 1 to 10")
-    additional_requirements: list[str] = Field(default=[], description="Any additional requirements like certifications or tools")
+    skills: dict[str,int] = Field(description="Technical skills expected from the candidate and its level from 1 to 10")
 
 class HumanizeResponse(BaseModel):
     text : str = Field(description="the new text with same meaning")
@@ -40,9 +38,8 @@ class ResumeInfoExtract(BaseModel):
     projects : dict[str,str] = Field(description='All the projects candidate has done and there discription')
     experence : float = Field(description="The exprence the candidate have")
 
-class QuestionRespose(BaseModel):
-    questions : dict[str,int] = Field(description='the question and its imporatance (1-10), 10 being very important')
-
+class QuestionResponse(BaseModel):
+    questions: dict[str, int] = Field(description='The question : importance (1-10), 10 being most important')
 
 class LLM_hr:
     def __init__(self):
@@ -103,7 +100,7 @@ class LLM_hr:
 
     #**Tested
     #TODO: completed 
-    def getSkill(self, job:str, level:int):
+    def getSkill(self, job:str, level:int) -> list[dict[str,int],dict[str,int],]:
         
         parser = PydanticOutputParser(pydantic_object=SkillResponse)
 
@@ -128,23 +125,23 @@ class LLM_hr:
     
     #!Not Tested
     #TODO: completed
-    def genrateQuestions(self,topic:str,level:int) -> dict[str,int]:
-
-        question_parse = PydanticOutputParser(pydantic_object=QuestionRespose)
+    def generateQuestions(self, topic: str, level: int):
+        question_parse = PydanticOutputParser(pydantic_object=QuestionResponse)
         question_prompt = PromptTemplate(
-                    template="""
-                    You are an AI hiring agent. 
-                    Generate a 3 interview questions for the topic "{topic}" suitable for a candidate with skill level {level}/10.
+            template="""
+            You are an AI hiring agent. 
+            Generate 3 interview questions for the topic "{topic}" suitable for a candidate with skill level {level}/10.
 
-                    Each question should have an importance rating (1-10), where 10 is most important.
-                    {format_instruction}
-                    """,
-                    input_variables=["topic", "level"],
-                    partial_variables={'format_instruction':question_parse.get_format_instructions()}
-                )
+            Each question should have an importance rating (1-10), where 10 is most important.
+            {format_instruction}
+            """,
+            input_variables=["topic", "level"],
+            partial_variables={'format_instruction': question_parse.get_format_instructions()}
+        )
+
         chain = question_prompt | self.respond_llm | question_parse
-        result = chain.invoke({"job_title": topic,"level" : level})
-        return result
+        result = chain.invoke({"topic": topic, "level": level},config={"temperature": 0.2}) 
+        return result.questions
 
     #**Tested
     #TODO: completed 
@@ -191,7 +188,7 @@ class LLM_hr:
         return result
 
     #!not tested
-    #TODO: in development
+    #TODO: in development (later)
     def resmue_profile(self,resume_text):
         
         resume_parser = PydanticOutputParser(pydantic_object=ResumeInfoExtract)

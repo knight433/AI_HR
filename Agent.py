@@ -47,9 +47,9 @@ class HieringAI:
         else:
             self.mouth.speak(f"Hello {self.name}, {greet_str}")
 
-    #! Not tested
+    #! partly tested
     #TODO: completed
-    def ask_question(self,question):
+    def ask_question(self,question:str):
 
         self.mouth.speak(question)
         answer = self.ear.hear()
@@ -92,14 +92,14 @@ class HieringAI:
 
         return ans_eval,depth_tech
     
-    #!Not Tested
-    #TODO: in development
+    #** Tested
+    #TODO:Completed
     def genrate_question(self,skills : dict[str,int]) -> None: 
         
         self.questions = {}
-        for skill,level in skills:
-            self.questions[skill] = self.llm.genrateQuestions(skill,level)
+        for skill,level in skills.items():
+            self.questions[skill] = self.llm.generateQuestions(skill,level)
         
-
+        return self.questions
         
 
