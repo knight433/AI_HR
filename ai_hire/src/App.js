@@ -1,23 +1,33 @@
-import logo from './logo.svg';
-import './App.css';
+// import { useEffect, useState } from "react";
+
+// function Home() {
+//   const [data, setData] = useState(null);
+
+//   useEffect(() => {
+//     fetch("http://127.0.0.1:5000/test")
+//       .then(response => response.json())
+//       .then(data => setData(data.testing))
+//       .catch(error => console.error("Error fetching data:", error));
+//   }, []);
+
+//   return (
+//     <div>
+//       <h1>Flask Data:</h1>
+//       {data ? <p>{JSON.stringify(data)}</p> : <p>Loading...</p>}
+//     </div>
+//   );
+// }
+
+// export default Home;
+
+import React from "react";
+import TreeBoxes from "./components/TreeBoxes";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Tree-Based Dynamic Boxes</h1>
+      <TreeBoxes />
     </div>
   );
 }
