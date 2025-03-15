@@ -39,7 +39,7 @@ class ResumeInfoExtract(BaseModel):
     experence : float = Field(description="The exprence the candidate have")
 
 class QuestionResponse(BaseModel):
-    questions: dict[str, int] = Field(description='The question : importance (1-10), 10 being most important')
+    questions: list[str] = Field(description='The question')
 
 class LLM_hr:
     def __init__(self):
@@ -48,7 +48,6 @@ class LLM_hr:
             huggingfacehub_api_token=API_KEY,
             task="text-generation"
         )
-    
     
     
     #**Tested
@@ -72,6 +71,7 @@ class LLM_hr:
         result = chain.invoke({"question": question, "candidate_answer": candidate_answer})
 
         return result
+
 
     #! Not Tested
     #TODO: completed base
@@ -111,7 +111,7 @@ class LLM_hr:
             Job Title: {job_title}  
             Experience Level: {level} (0 = Fresher, 10 = Senior)
 
-            Based on the job title and experience level, list the most relevant technical and soft skills a candidate should have with the level of experties they must have on that skill.  
+            Based on the job title and experience level, list the most relevant skill a candidate should have with the level of experties they must have on that skill.  
             {format_instruction}.
             """,
             input_variables=["job_title", "level"],
@@ -131,8 +131,6 @@ class LLM_hr:
             template="""
             You are an AI hiring agent. 
             Generate 3 interview questions for the topic "{topic}" suitable for a candidate with skill level {level}/10.
-
-            Each question should have an importance rating (1-10), where 10 is most important.
             {format_instruction}
             """,
             input_variables=["topic", "level"],
@@ -140,7 +138,7 @@ class LLM_hr:
         )
 
         chain = question_prompt | self.respond_llm | question_parse
-        result = chain.invoke({"topic": topic, "level": level},config={"temperature": 0.2}) 
+        result = chain.invoke({"topic": topic, "level": level}) 
         return result.questions
 
     #**Tested
