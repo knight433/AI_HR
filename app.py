@@ -4,55 +4,48 @@ from flask_cors import CORS
 
 class WorkflowTree:
     def __init__(self,**kwargs):
-        self.text = kwargs.get("text")
-        self.left = None
-        self.right = None
+        self.skill = kwargs.get("skill")
+        self.question = kwargs.get("question")
+        self.followUP = int(kwargs.get("follow_up",None))
+        self.next = None
 
 app = Flask(__name__)
 CORS(app) 
-
-def build_tree(nodes, edges):
-    node_map = {node["id"]: WorkflowTree(text = node["text"]) for node in nodes}
-
-    for edge in edges:
-        parent = node_map[edge["from"]]
-        child = node_map[edge["to"]]
-
-        if parent.left is None:
-            parent.left = child
-        elif parent.right is None:
-            parent.right = child
-
-    root_id = nodes[0]["id"] 
-    return node_map[root_id]
-
-def print_tree(node, level=0, prefix="Root: "):
-    if node is not None:
-        print("  " * level + prefix + node.text)
-        print_tree(node.left, level + 1, "L--> ")
-        print_tree(node.right, level + 1, "R--> ")
-
-@app.route('/test')
-def testing():
-    return {"testing": [1, 2, 3]}
 
 @app.route('/')
 def home():
     return 'Hello, Flask!'
 
-@app.route('/save_graph', methods=['POST'])
-def save_graph():
-    data = request.get_json()
-    nodes = data.get("nodes", [])
-    edges = data.get("edges", [])
 
-    if not nodes:
-        return '', 204  
-
-    root = build_tree(nodes, edges)    
-    print_tree(root)
-    return jsonify({"message": "Graph converted to WorkflowTree!"})
+@app.route('/api/theory_sessions', methods=['POST'])
+def receive_theory_data():
+    data = request.json
+    print("Received data:", data)
+    return jsonify({"message": "Data received successfully", "data": data})
 
 if __name__ == '__main__':
     app.run(debug=True)
 
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+class WorkflowTree:
+    def __init__(self, skill=None, question=None, follow_up=None):
+        self.skill = skill
+        self.question = question
+        self.follow_up = follow_up if follow_up else []  # List of follow-up questions
+        self.next = None  # Next main node in the workflow
+
+
+@app.route('/api/theory_sessions', methods=['POST'])
+def receive_theory_data():
+    data = request.json
+    print("Received data:", data)
+
+    workflow_tree = build_workflow_tree(data)
+    
+    return jsonify({"message": "Data received successfully", "tree_root": workflow_tree.__dict__})
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -1,0 +1,53 @@
+.next-node-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 10px;
+  }
+  
+  .next-node {
+    background-color: #3498db;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    width: 100px;
+    position: relative;
+  }
+  
+  .next-node:hover {
+    background-color: #2980b9;
+  }
+  
+  .node-popup {
+    position: absolute;
+    top: 30px;
+    left: 110px;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    width: 200px;
+  }
+  
+  .add-followup-btn {
+    margin-top: 10px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .add-followup-btn:hover {
+    background-color: #388e3c;
+  }
+  
