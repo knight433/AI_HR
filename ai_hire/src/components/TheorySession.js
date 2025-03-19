@@ -43,9 +43,9 @@ const TheorySession = ({ sessionNumber, content, onRemove, getSessionData }) => 
     ));
   };
 
-  const updateFollowupData = (id, follow_up) => {
+  const updateFollowupData = (id, question) => {
     setNodes(prevNodes => prevNodes.map(node => 
-      node.id === id ? { ...node, follow_up } : node
+      node.id === id ? { ...node, follow_up: question } : node
     ));
   };
 
@@ -82,7 +82,7 @@ const TheorySession = ({ sessionNumber, content, onRemove, getSessionData }) => 
                       content={followup.content} 
                       parentId={followup.parentId} 
                       onRemove={removeNode} 
-                      updateFollowupData={updateFollowupData} 
+                      updateNodeData={updateFollowupData} 
                     />
                   ))}
               </div>

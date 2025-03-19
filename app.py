@@ -1,51 +1,68 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+app = Flask(__name__)
+CORS(app)
 
-class WorkflowTree:
-    def __init__(self,**kwargs):
-        self.skill = kwargs.get("skill")
-        self.question = kwargs.get("question")
-        self.followUP = int(kwargs.get("follow_up",None))
+session_list = []
+
+class QuestionNode:
+    def __init__(self, id,skill, question, level, follow_up=False):
+        self.id = id
+        self.skill = skill
+        self.question = question
+        self.level = level
+        self.follow_up = follow_up
         self.next = None
 
-app = Flask(__name__)
-CORS(app) 
+def printWorkFlow():
+    for i, head in enumerate(session_list):
+        print(f"Session {i + 1}:")
+        cur = head
+        while cur:
+            print(f"ID: {cur.id}, Question: {cur.question}")
+            cur = cur.next
+        print("-" * 20)
+
+def build_workflow_tree(data):
+    
+    for session in data:
+        head = None
+        cur = None
+        for node in session['nodes']:
+            
+            if head:
+                if node['question'] != '':
+                    temp = QuestionNode(node['id'],node['skill'],node['question'],node['level'])
+                    cur.next = temp
+
+                elif node['follow_up'] != '': 
+                    cur.next = QuestionNode(node['id'],cur.skill,node['follow_up'],cur.level,follow_up=True)
+
+                cur = cur.next
+            
+            else:
+                temp = QuestionNode(node['id'],node['skill'],node['question'],node['level'])
+                head = temp
+                cur = temp 
+        
+        session_list.append(head)
+
 
 @app.route('/')
 def home():
     return 'Hello, Flask!'
 
-
-@app.route('/api/theory_sessions', methods=['POST'])
-def receive_theory_data():
-    data = request.json
-    print("Received data:", data)
-    return jsonify({"message": "Data received successfully", "data": data})
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-class WorkflowTree:
-    def __init__(self, skill=None, question=None, follow_up=None):
-        self.skill = skill
-        self.question = question
-        self.follow_up = follow_up if follow_up else []  # List of follow-up questions
-        self.next = None  # Next main node in the workflow
-
-
 @app.route('/api/theory_sessions', methods=['POST'])
 def receive_theory_data():
     data = request.json
     print("Received data:", data)
 
-    workflow_tree = build_workflow_tree(data)
-    
-    return jsonify({"message": "Data received successfully", "tree_root": workflow_tree.__dict__})
+    # Build WorkflowTree
+    build_workflow_tree(data)
+    printWorkFlow()
+
+    return jsonify({"message": "Data received successfully"})
 
 if __name__ == '__main__':
     app.run(debug=True)

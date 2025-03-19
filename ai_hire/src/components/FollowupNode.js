@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../components/FollowupNode.css";
 
-const FollowupNode = ({ id, content, parentId, onRemove }) => {
+const FollowupNode = ({ id, content, parentId, onRemove, updateNodeData }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [nodeTitle, setNodeTitle] = useState("ADD QUESTION"); // Default text
@@ -23,6 +23,7 @@ const FollowupNode = ({ id, content, parentId, onRemove }) => {
   const handleSave = () => {
     if (question.trim() !== "") {
       setNodeTitle("Follow Up"); // Update title with question
+      updateNodeData(id, question); // Save to parent
     }
     setIsOpen(false);
   };

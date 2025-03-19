@@ -1,16 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../components/NextNode.css";
 
-const NextNode = ({ id, content, parentId, addFollowup, onRemove }) => {
+const NextNode = ({ id, content, parentId, addFollowup, onRemove, updateNodeData }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [skill, setSkill] = useState(""); // Default empty
+  const [skill, setSkill] = useState(""); 
   const [question, setQuestion] = useState("");
   const [level, setLevel] = useState(1);
-  const [nodeTitle, setNodeTitle] = useState("ADD SKILL"); // Default text
+  const [nodeTitle, setNodeTitle] = useState("ADD SKILL"); 
 
   const popupRef = useRef(null);
 
-  // Close popup when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
@@ -21,27 +20,25 @@ const NextNode = ({ id, content, parentId, addFollowup, onRemove }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Save and Update Node Title with Skill Name
   const handleSave = () => {
     if (skill.trim() !== "") {
-      setNodeTitle(skill); // Update title with skill name
+      setNodeTitle(skill);
     }
     setIsOpen(false);
+    // Send data to parent
+    updateNodeData(id, skill, question, level);
   };
 
   return (
     <div className="next-node-container">
-      {/* Small Node Box */}
       <div className="next-node" id={id} onClick={() => setIsOpen(true)}>
         <button className="remove-btn" onClick={(e) => { e.stopPropagation(); onRemove(id); }}>x</button>
         <h4 className="node-title">{nodeTitle}</h4>
       </div>
 
-      {/* Popup for Editing Node Details */}
       {isOpen && (
         <div className="node-popup" ref={popupRef}>
           <h4>Edit Node</h4>
-
           <div className="input-group">
             <label>Skill</label>
             <input
@@ -74,9 +71,7 @@ const NextNode = ({ id, content, parentId, addFollowup, onRemove }) => {
             />
           </div>
 
-          {/* Add Followup Button (Inside Popup) */}
           <button className="add-followup-btn" onClick={() => addFollowup(id)}>+ Followup</button>
-
           <div className="popup-buttons">
             <button className="save-btn" onClick={handleSave}>Save</button>
             <button className="close-btn" onClick={() => setIsOpen(false)}>Close</button>
