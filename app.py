@@ -1,19 +1,11 @@
 from flask import Flask, request, jsonify
+from LLM_backend.data_structure import QuestionNode
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
 session_list = []
-
-class QuestionNode:
-    def __init__(self, id,skill, question, level, follow_up=False):
-        self.id = id
-        self.skill = skill
-        self.question = question
-        self.level = level
-        self.follow_up = follow_up
-        self.next = None
 
 def printWorkFlow():
     for i, head in enumerate(session_list):

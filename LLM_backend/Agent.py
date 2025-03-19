@@ -1,5 +1,5 @@
 import LLM_
-from LLM_backend.audio_module import Voice,Hear
+from audio_module import Voice,Hear
 from PyPDF2 import PdfReader
 from datetime import datetime
 
@@ -90,7 +90,7 @@ class HieringAI:
             if eval.technical_accuracy > 6:
                 return  eval.technical_accuracy
 
-        depth_tech = technical_accuracy(question,answer)
+        depth_tech = technical_accuracy(answer)
 
         return ans_eval,depth_tech
     
@@ -127,7 +127,7 @@ class HieringAI:
         #TODO: completed
         def technical_accuracy(c_answer):#?Helper
 
-            followUp_question = self.llm.followup(question,c_answer)
+            followUp_question = self.llm.followUp(question,c_answer)
             self.mouth.speak(followUp_question)
             followUP_ans = input(f"{followUp_question} : ")
             eval = self.llm.evaluate_answer(followUp_question,followUP_ans)
@@ -135,7 +135,7 @@ class HieringAI:
             if eval.technical_accuracy > 6:
                 return  eval.technical_accuracy
 
-        depth_tech = technical_accuracy(question,answer)
+        depth_tech = technical_accuracy(answer)
 
         return ans_eval,depth_tech
     

@@ -1,12 +1,19 @@
-import LLM_backend.Agent as Agent
+# from data_structure import QuestionNode
+import Agent as Agent
+import dump
 
 agent = Agent.HieringAI()
+d = dump.dump1()
 
-agent.setup(job="AI Researcher", level=6, skills={"Deep Learning":8}, name="John Doe")
-agent.genrate_question()
+session = d.build_workflow_tree()
 
-for q in agent.questions["Deep Learning"]:
-    print(agent.Test_ask_question(q))
+for i, head in enumerate(session):
+    print(f"Session {i + 1}:")
+    cur = head
+    while cur:
+        print(agent.Test_ask_question(cur.question))
+        cur = cur.next
+
 
 
 
