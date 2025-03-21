@@ -15,5 +15,3 @@ for i, head in enumerate(session):
         cur = cur.next
 
 
-
-

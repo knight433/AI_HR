@@ -1,6 +1,7 @@
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain.output_parsers import OutputFixingParser
 import os
 from pydantic import BaseModel, Field
 
@@ -53,8 +54,9 @@ class LLM_hr:
     #**Tested
     #TODO: completed
     def evaluate_answer(self, question: str, candidate_answer: str): 
+        parser = PydanticOutputParser(pydantic_object=EvaluationResponse)
+        fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=self.respond_llm)
         
-        prase = PydanticOutputParser(pydantic_object=EvaluationResponse)
         evaluation_prompt = PromptTemplate(
             template="""
             You are an AI hiring agent responsible for evaluating candidates' answers.
@@ -64,13 +66,16 @@ class LLM_hr:
             {format_instruction}
             """,
             input_variables=["question", "candidate_answer"],
-            partial_variables={'format_instruction':prase.get_format_instructions()}
+            partial_variables={'format_instruction': parser.get_format_instructions()}
         )
 
-        chain = evaluation_prompt | self.respond_llm | prase
-        result = chain.invoke({"question": question, "candidate_answer": candidate_answer})
-
-        return result
+        chain = evaluation_prompt | self.respond_llm | fixing_parser
+        
+        try:
+            result = chain.invoke({"question": question, "candidate_answer": candidate_answer})
+            return result
+        except Exception as e:
+            return str(e)
 
 
     #! Not Tested
@@ -158,12 +163,13 @@ class LLM_hr:
         chain = prompt | self.respond_llm | parser
         result = chain.invoke({"input_text" : in_string,"tone":tone},config={"temperature": 0.2})
 
-        return result
+        return result.text
     
     #**tested
     #TODO: completed
     def followUp(self, question: str, answer: str):
         parser = PydanticOutputParser(pydantic_object=FollowUpResponse)
+        fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=self.respond_llm)
 
         followup_prompt = PromptTemplate(
             template="""
@@ -181,9 +187,9 @@ class LLM_hr:
             partial_variables={'format_instructions': parser.get_format_instructions()}
         )
 
-        chain = followup_prompt | self.respond_llm | parser
+        chain = followup_prompt | self.respond_llm | fixing_parser
         result = chain.invoke({"question": question, "answer": answer})
-        return result
+        return result.follow_up_question
 
     #!not tested
     #TODO: in development (later)
