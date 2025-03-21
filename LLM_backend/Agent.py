@@ -82,7 +82,7 @@ class HieringAI:
         #TODO: completed
         def technical_accuracy(c_answer):#?Helper
 
-            followUp_question = self.llm.followup(question,c_answer)
+            followUp_question = self.llm.followUp(question,c_answer)
             self.mouth.speak(followUp_question)
             followUP_ans = self.ear.hear()
             eval = self.llm.evaluate_answer(followUp_question,followUP_ans)
