@@ -18,7 +18,7 @@ def printWorkFlow():
 
 def build_workflow_tree(data):
     
-    for session in data:
+    for session in data['theoryData']:
         head = None
         cur = None
         for node in session['nodes']:

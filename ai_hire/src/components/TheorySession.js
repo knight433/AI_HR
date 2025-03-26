@@ -55,10 +55,10 @@ const TheorySession = ({ sessionNumber, content, onRemove, getSessionData }) => 
 
   return (
     <div className="session-container">
+      <button className="remove-btn" onClick={() => onRemove(sessionNumber)}>Remove</button>
       <h2>Theory Session {sessionNumber}</h2>
       <p>{content}</p>
-      <button className="remove-btn" onClick={() => onRemove(sessionNumber)}>Remove</button>
-      <button onClick={addNext}>Add Next</button>
+      <button className="add-next-btn" onClick={addNext}>Add Next</button>
 
       <div className="nodes-container">
         {nodes.map((node) =>
@@ -82,7 +82,7 @@ const TheorySession = ({ sessionNumber, content, onRemove, getSessionData }) => 
                       content={followup.content} 
                       parentId={followup.parentId} 
                       onRemove={removeNode} 
-                      updateNodeData={updateFollowupData} 
+                      updateNodeData={updateFollowupData}
                     />
                   ))}
               </div>

@@ -1,22 +1,35 @@
 import React, { useState } from "react";
 import BuildSession from "../components/BuildSession";
 import TheorySession from "../components/TheorySession";
+import './InterviewBuilder.css'
 
 const InterviewBuilder = () => {
   const [sessions, setSessions] = useState([]);
   const [theoryData, setTheoryData] = useState({});
+  const [buildData, setBuildData] = useState({});
 
   const addBuildSession = () => {
-    setSessions([...sessions, { id: sessions.length + 1, type: "build", content: `This is Build Session ${sessions.length + 1}` }]);
+    setSessions([
+      ...sessions,
+      { id: sessions.length + 1, type: "build", content: `This is Build Session ${sessions.length + 1}` }
+    ]);
   };
 
   const addTheorySession = () => {
-    setSessions([...sessions, { id: sessions.length + 1, type: "theory", content: `This is Theory Session ${sessions.length + 1}` }]);
+    setSessions([
+      ...sessions,
+      { id: sessions.length + 1, type: "theory", content: `This is Theory Session ${sessions.length + 1}` }
+    ]);
   };
 
   const removeSession = (sessionNumber) => {
     setSessions(sessions.filter((session) => session.id !== sessionNumber));
-    setTheoryData(prev => {
+    setTheoryData((prev) => {
+      const updatedData = { ...prev };
+      delete updatedData[sessionNumber];
+      return updatedData;
+    });
+    setBuildData((prev) => {
       const updatedData = { ...prev };
       delete updatedData[sessionNumber];
       return updatedData;
@@ -24,7 +37,7 @@ const InterviewBuilder = () => {
   };
 
   const collectDataAndSend = async () => {
-    const formattedData = Object.values(theoryData).map(session => ({
+    const formattedTheoryData = Object.values(theoryData).map(session => ({
       sessionNumber: session.sessionNumber,
       nodes: session.nodes.map(node => ({
         id: node.id,
@@ -32,16 +45,28 @@ const InterviewBuilder = () => {
         question: node.question || "",
         level: node.level || 1,
         follow_up: node.type === "followup" ? node.follow_up || "" : "",
-      }))
+      })),
     }));
 
-    console.log("Sending data:", formattedData);
+    const formattedBuildData = Object.values(buildData).map(session => ({
+      sessionNumber: session.sessionNumber,
+      nodes: session.nodes.map(node => ({
+        id: node.id,
+        skill: node.skill || "",
+        question: node.question || "",
+        level: node.level || 1,
+        follow_up: node.type === "followup" ? node.follow_up || "" : "",
+      })),
+    }));
+
+    console.log("Sending Theory Data:", formattedTheoryData);
+    console.log("Sending Build Data:", formattedBuildData);
 
     try {
       const response = await fetch("http://127.0.0.1:5000/api/theory_sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formattedData),
+        body: JSON.stringify({ theoryData: formattedTheoryData, buildData: formattedBuildData }),
       });
 
       const result = await response.json();
@@ -62,7 +87,13 @@ const InterviewBuilder = () => {
         {sessions.length === 0 ? <p>No sessions added yet</p> : null}
         {sessions.map((session) =>
           session.type === "build" ? (
-            <BuildSession key={session.id} sessionNumber={session.id} content={session.content} onRemove={removeSession} />
+            <BuildSession
+              key={session.id}
+              sessionNumber={session.id}
+              content={session.content}
+              onRemove={removeSession}
+              getSessionData={(id, data) => setBuildData(prev => ({ ...prev, [id]: data }))}
+            />
           ) : (
             <TheorySession
               key={session.id}
