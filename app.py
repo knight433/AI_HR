@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 from LLM_backend.data_structure import QuestionNode
 from flask_cors import CORS
+from data_base import database
 
 app = Flask(__name__)
 CORS(app)
-
+db = database()
 session_list = []
 
 def printWorkFlow():
