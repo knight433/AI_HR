@@ -79,8 +79,8 @@ class database:
             list_ids.append(res.inserted_id)
         return list_ids
     
-    #!Not Tested
-    #TODO: in development
+    #** Tested
+    #TODO: completed
     def fetch_workflow(self, session_id:int, password:str):
         
         session = self.session_collection.find_one({'session_id': session_id})
@@ -95,4 +95,3 @@ class database:
 
         print("found",session)
         return session
-

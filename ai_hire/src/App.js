@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import InterviewBuilder from "./pages/InterviewBuilder";
 import CandidateEntry from "./pages/CandidateEntry";
+import CodeEditorWithInstructions from "./pages/BuildPage";
 
 function HomePage() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/interview-builder" element={<InterviewBuilder />} />
         <Route path="/candidate-entry" element={<CandidateEntry />} />
+        <Route path="/BuildPage" element={<CodeEditorWithInstructions />} />
       </Routes>
     </Router>
   );

@@ -93,13 +93,30 @@ def home():
 def receive_theory_data():
     data = request.json
     # print("Received data:", data)
-
-    # db.create_session(data,"Main_test_user","password_1")
-    new_data = db.fetch_workflow(1,'password_1')
-    build_workflow_tree(new_data)
-    printWorkFlow()
+    db.create_session(data,"Main_test_user","password_1")
 
     return jsonify({"message": "Data received successfully"})
+
+@app.route("/instructions")
+def get_instructions():
+    print("sending instructions")
+    return "Write a function that returns the factorial of a number.\nMake sure to handle edge cases."
+
+@app.route("/submit-session", methods=["POST"])
+def submit_session():
+    data = request.json
+    session_id = int(data.get("sessionId"))
+    password = data.get("password")
+
+    new_data = db.fetch_workflow(session_id,password)
+    
+    if new_data:
+        build_workflow_tree(new_data)
+        printWorkFlow()
+    else:
+        print("session not fonund")
+    
+    return jsonify({"message": "Session received"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
