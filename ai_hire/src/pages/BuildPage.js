@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
+import socket from "../socket";
 
 function CodeEditorWithInstructions() {
   const [instructions, setInstructions] = useState("");
 
   useEffect(() => {
-    // Fetch instructions from your Flask backend
-    fetch("http://localhost:5000/instructions")
-      .then((res) => res.text())
-      .then((data) => setInstructions(data))
-      .catch((err) => console.error("Error fetching instructions:", err));
+    // Request instructions from backend
+    socket.emit("request_instructions");
+
+    // Listen for response
+    socket.on("instructions_data", (data) => {
+      setInstructions(data);
+    });
+
+    // Cleanup the listener when component unmounts
+    return () => {
+      socket.off("instructions_data");
+    };
   }, []);
 
   return (

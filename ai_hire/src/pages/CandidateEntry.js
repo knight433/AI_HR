@@ -1,30 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./CandidateEntry.css";
+import socket from "../socket";
 
 const CandidateEntry = () => {
   const [sessionId, setSessionId] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/submit-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ sessionId, password }),
-      });
+  useEffect(() => {
+    // Updated to match backend emit event
+    socket.on("session_submit_response", (data) => {
+      alert(data.message || "No message from server");
+    });
 
-      const data = await response.json();
-      if (response.ok) {
-        alert("Session submitted successfully!");
-      } else {
-        alert(data.message || "Submission failed");
-      }
-    } catch (error) {
-      alert("Error sending data to the backend.");
-      console.error(error);
-    }
+    return () => {
+      socket.off("session_submit_response");
+    };
+  }, []);
+
+  const handleSubmit = () => {
+    socket.emit("submit_session", { sessionId, password });
   };
 
   return (

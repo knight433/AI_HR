@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import BuildSession from "../components/BuildSession";
 import TheorySession from "../components/TheorySession";
-import './InterviewBuilder.css'
+import socket from "../socket";
+import './InterviewBuilder.css';
 
 const InterviewBuilder = () => {
   const [sessions, setSessions] = useState([]);
@@ -36,7 +37,7 @@ const InterviewBuilder = () => {
     });
   };
 
-  const collectDataAndSend = async () => {
+  const collectDataAndSend = () => {
     const formattedTheoryData = Object.values(theoryData).map(session => ({
       sessionNumber: session.sessionNumber,
       nodes: session.nodes.map(node => ({
@@ -62,18 +63,11 @@ const InterviewBuilder = () => {
     console.log("Sending Theory Data:", formattedTheoryData);
     console.log("Sending Build Data:", formattedBuildData);
 
-    try {
-      const response = await fetch("http://127.0.0.1:5000/api/theory_sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theoryData: formattedTheoryData, buildData: formattedBuildData }),
-      });
+    socket.emit("save_workflow", {
+      theoryData: formattedTheoryData,
+      buildData: formattedBuildData,
+    });
 
-      const result = await response.json();
-      console.log("Response from backend:", result);
-    } catch (error) {
-      console.error("Error sending data:", error);
-    }
   };
 
   return (
@@ -81,8 +75,8 @@ const InterviewBuilder = () => {
       <h1>Interview Builder</h1>
       <button onClick={addBuildSession} style={{ padding: "10px", margin: "10px" }}>Add Build Session</button>
       <button onClick={addTheorySession} style={{ padding: "10px", margin: "10px" }}>Add Theory Session</button>
-      <button onClick={collectDataAndSend} style={{ padding: "10px", margin: "10px", background: "lightblue" }}>Send</button>
-      
+      <button onClick={collectDataAndSend} style={{ padding: "10px", margin: "10px" }}>Send</button>
+
       <div>
         {sessions.length === 0 ? <p>No sessions added yet</p> : null}
         {sessions.map((session) =>
