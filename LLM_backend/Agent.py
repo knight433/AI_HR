@@ -139,6 +139,11 @@ class HieringAI:
 
         return ans_eval,depth_tech
     
+    #!Not Tested
+    #TODO: in development
+    def eval_code(self,code : str):
+        pass
+    
     #** Tested
     #TODO:Completed
     def genrate_question(self): 

@@ -42,6 +42,51 @@ class ResumeInfoExtract(BaseModel):
 class QuestionResponse(BaseModel):
     questions: list[str] = Field(description='The question')
 
+class CodeEvaluation(BaseModel):
+    correctness: int = Field(description="Does the code solve the problem from 0 to 5 (0 = completely failed, 5 = handles all edge cases)")
+    structure: int = Field(description="How well structured the code is? From 1 to 5 (1 = poor, 5 = well structured)")
+    can_improve: bool = Field(description="Can the code be improved for the given goal?")
+
+class DSAeval(CodeEvaluation):
+    data_struct: bool = Field(description="Are appropriate data structures used?")
+    edge_case: bool = Field(description="Does the code handle edge cases?")
+    time_complexity: int = Field(description="Efficiency of the algorithm from 1 to 5")
+    space_complexity: int = Field(description="Memory usage efficiency from 1 to 5")
+
+class SQLeval(CodeEvaluation):
+    query_correctness: int = Field(description="How accurately the query retrieves expected data? From 1 to 5")
+    query_efficiency: int = Field(description="Efficiency of the query with respect to joins, indexes, etc. From 1 to 5")
+    joins_used: bool = Field(description="Were appropriate joins used?")
+    group_by_having: bool = Field(description="Were GROUP BY and HAVING clauses used effectively?")
+    normalization_understanding: bool = Field(description="Does the candidate show understanding of DB normalization?")
+
+class FrontendEval(CodeEvaluation):
+    ui_design: int = Field(description="Visual and functional quality of the UI from 1 to 5")
+    responsiveness: bool = Field(description="Is the UI responsive across devices?")
+    component_structure: int = Field(description="Component modularity and reusability from 1 to 5")
+    state_management: int = Field(description="How well the state is managed (e.g., hooks, Redux) from 1 to 5")
+    error_handling: bool = Field(description="Does the UI handle input errors gracefully?")
+
+class BackendEval(CodeEvaluation):
+    api_design: int = Field(description="Quality of API endpoints (RESTful, naming, clarity) from 1 to 5")
+    db_integration: bool = Field(description="Is the DB integrated and queried correctly?")
+    auth_used: bool = Field(description="Is authentication or validation used appropriately?")
+    error_handling: bool = Field(description="Are errors handled gracefully in backend?")
+    separation_of_concerns: int = Field(description="Are business logic and routes/controllers separated properly from 1 to 5")
+
+class DevOpsEval(CodeEvaluation):
+    docker_used: bool = Field(description="Is Docker used correctly to containerize the app?")
+    deployment_ready: bool = Field(description="Can the app be deployed as is?")
+    ci_cd_understanding: bool = Field(description="Does the candidate understand CI/CD pipelines?")
+    logs_monitoring: bool = Field(description="Has the candidate added logging or monitoring capability?")
+
+class SystemDesignEval(BaseModel):
+    scalability: int = Field(description="How well the system scales from 1 to 5")
+    components_clear: bool = Field(description="Are major components and responsibilities clearly defined?")
+    db_choice_justified: bool = Field(description="Is the database choice justified and optimal?")
+    tradeoffs_discussed: bool = Field(description="Were trade-offs and design decisions explained?")
+
+
 class LLM_hr:
     def __init__(self):
         self.respond_llm = HuggingFaceEndpoint(
@@ -178,7 +223,7 @@ class LLM_hr:
             **Question:** {question}  
             **Candidate's Answer:** {answer}  
 
-            Your task is to generate a follow-up question in **valid JSON format only**.
+            Your task is to generate a follow-up question.
             Do not include extra text or explanations.
             
             {format_instructions}
@@ -190,6 +235,31 @@ class LLM_hr:
         chain = followup_prompt | self.respond_llm | fixing_parser
         result = chain.invoke({"question": question, "answer": answer})
         return result.follow_up_question
+    
+    #!Not Tested
+    #TODO: in development
+    def evaluate_code(self, code: str, goal: str, eval_schema: Type[BaseModel]) -> BaseModel:
+        parser = PydanticOutputParser(pydantic_object=eval_schema)
+        fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=self.respond_llm)
+
+        eval_prompt = PromptTemplate(
+            template="""
+            You are an AI interviewer analyzing a candidate's code submission.
+
+            Goal:
+            {goal}
+            Candidate Code:
+            {code}
+            Your task is to return ONLY the evaluation in this format:
+            {format_instructions}
+            """,
+            input_variables=["goal", "code"],
+            partial_variables={"format_instructions": parser.get_format_instructions()},
+        )
+
+        chain = eval_prompt | self.respond_llm | fixing_parser
+        return chain.invoke({"goal": goal, "code": code})
+
 
     #!not tested
     #TODO: in development (later)
